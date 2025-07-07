@@ -1,0 +1,86 @@
+Collaborative Candidate Notes Application - Technical Documentation
+===============================================================
+
+ARCHITECTURE DIAGRAM
+--------------------
+
++-------------------+         HTTP/REST         +-------------------+
+|                   | <-----------------------> |                   |
+|    React Frontend |                          |   Node.js Backend  |
+|                   | <--- Socket.IO (WS) ---> |                   |
++-------------------+                          +-------------------+
+        |                                              |
+        |                                              |
+        |                                              |
+        v                                              v
++-------------------+                          +-------------------+
+|                   |                          |                   |
+|   Browser Local   |                          |     MongoDB       |
+|   Storage (JWT)   |                          |                   |
++-------------------+                          +-------------------+
+
+- Users interact with the React frontend (SPA)
+- Authenticated via JWT (stored in localStorage)
+- Real-time updates via Socket.IO (WebSockets)
+- REST API for CRUD operations
+- MongoDB for persistent storage
+
+
+LIBRARIES & SERVICES USED
+-------------------------
+
+**Frontend (React):**
+- react, react-dom, react-router-dom: SPA and routing
+- socket.io-client: Real-time communication with backend
+- axios: HTTP requests to backend API
+
+**Backend (Node.js/Express):**
+- express: Web server and REST API
+- socket.io: Real-time WebSocket server
+- mongoose: MongoDB ODM for schema and queries
+- bcryptjs: Password hashing
+- jsonwebtoken: JWT authentication
+- cors: Cross-origin resource sharing
+- dotenv: Environment variable management
+
+**Database:**
+- MongoDB: Stores users, candidates, notes, notifications
+
+**Justifications:**
+- **React**: Modern, component-based UI, fast SPA
+- **Socket.IO**: Reliable real-time communication, easy integration with React/Node
+- **JWT**: Stateless, secure authentication for APIs and sockets
+- **MongoDB**: Flexible schema, good for collaborative/note data
+- **Mongoose**: Simplifies MongoDB access, schema validation
+- **bcryptjs**: Secure password storage
+- **axios**: Simple, promise-based HTTP client
+
+
+FUTURE ENHANCEMENTS (If More Time)
+----------------------------------
+
+1. **Mention Suggestions in Notes**
+   - Smarter autocomplete (fuzzy search, recent mentions)
+   - Show avatars in dropdown
+2. **Rich Text Notes**
+   - Markdown or WYSIWYG editor for notes
+   - Support for file/image attachments
+3. **Notification Center**
+   - Persistent notification panel with read/unread states
+   - Push notifications (browser/mobile)
+4. **User Presence & Typing Indicators**
+   - Show who is online and who is typing in real time
+5. **Role-Based Access Control**
+   - Admin, manager, and candidate roles with different permissions
+6. **Audit Log & History**
+   - Track edits/deletes to notes for accountability
+7. **Testing & CI/CD**
+   - Add unit/integration tests, GitHub Actions for CI
+8. **Accessibility & Internationalization**
+   - ARIA roles, keyboard navigation, multi-language support
+9. **Scalability**
+   - Deploy with Docker/Kubernetes, use Redis for socket scaling
+10. **Performance Optimization**
+    - Lazy loading, code splitting, server-side rendering for SEO
+
+These enhancements would improve usability, security, and scalability for larger teams and production environments. 

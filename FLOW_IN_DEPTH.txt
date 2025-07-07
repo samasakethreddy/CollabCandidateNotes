@@ -1,0 +1,145 @@
+Collaborative Candidate Notes Application - In-Depth Flow
+========================================================
+
+1. USER LOGIN FLOW
+------------------
+
+**Client Side:**
+- File: `client/src/pages/Login.js`
+  - User enters email and password, submits form.
+  - `onSubmit` function:
+    - Sends POST request to `/api/auth/login` via `api` (axios instance).
+    - On success: Clears localStorage, sets `token` and `userId` in localStorage, navigates to `/` (Dashboard).
+    - Variables: `formData`, `token`, `userId`.
+
+- File: `client/src/api/index.js`
+  - Axios instance with request interceptor:
+    - Adds `x-auth-token` header from localStorage for all requests.
+  - Response interceptor:
+    - If 401, clears localStorage and redirects to `/login`.
+
+- File: `client/src/components/PrivateRoute.js`
+  - Checks for valid JWT and matching `userId` in localStorage.
+  - If invalid, clears localStorage and redirects to `/login`.
+
+- File: `client/src/context/SocketContext.js`
+  - On mount, decodes JWT, checks userId match, connects Socket.IO client with token.
+  - Provides `socket` and `isInitialized` via context.
+
+**Server Side:**
+- File: `server/controllers/authController.js`
+  - `login` function:
+    - Finds user by email, checks password with bcrypt.
+    - Creates JWT with user ID, returns token and userId.
+    - Tracks session in `activeSessions` map.
+
+- File: `server/routes/auth.js`
+  - POST `/login` route uses `login` controller.
+
+- File: `server/middleware/auth.js`
+  - Middleware for protected routes:
+    - Verifies JWT from `x-auth-token` header.
+    - Fetches user from DB, attaches to `req.user`.
+
+
+2. SOCKET CONNECTION & ROOM FLOW
+-------------------------------
+
+**Client Side:**
+- File: `client/src/context/SocketContext.js`
+  - Connects to Socket.IO server with JWT token.
+  - Provides `socket` to all components.
+
+- File: `client/src/pages/Dashboard.js`
+  - On mount, fetches candidates and notifications.
+  - Sets up notification listener on `socket`.
+
+- File: `client/src/components/Notes.js`
+  - When a candidate is selected:
+    - Joins candidate room: `socket.emit('join_room', candidateId)`
+    - Joins user notification room: `socket.emit('join_user_room', userId)`
+    - On unmount, leaves both rooms.
+  - Listens for `new_note` and `new_notification` events.
+
+**Server Side:**
+- File: `server/server.js`
+  - Socket.IO setup:
+    - Authenticates each socket with JWT.
+    - Tracks user connections in `userConnections` map.
+    - Handles events:
+      - `join_room`: `socket.join(candidateId)`
+      - `join_user_room`: `socket.join(userId)`
+      - `leave_room`, `leave_user_room`: leaves rooms
+      - `disconnect`: cleans up connections
+
+
+3. NOTE CREATION & TAGGING FLOW
+-------------------------------
+
+**Client Side:**
+- File: `client/src/components/Notes.js`
+  - User types note, uses `@` to tag users (autocomplete from `/api/users`).
+  - On submit:
+    - Sends POST to `/api/notes/:candidateId` with message.
+    - Highlights tagged usernames in UI.
+
+**Server Side:**
+- File: `server/controllers/noteController.js`
+  - `createNote` function:
+    - Creates note in DB with candidate, author, message.
+    - Parses message for `@username` tags (regex).
+    - For each tagged user:
+      - Finds user by name.
+      - Creates notification in DB.
+      - Emits `new_notification` to that user's room.
+    - Emits `new_note` to candidate room.
+
+- File: `server/routes/notes.js`
+  - POST `/api/notes/:candidateId` uses `createNote` controller.
+
+- File: `server/controllers/notificationController.js`
+  - `getNotifications`: Returns notifications for current user (populates note/candidate info).
+  - `markAsRead`: Marks notification as read.
+
+- File: `server/routes/notifications.js`
+  - GET `/api/notifications` and PUT `/api/notifications/:notificationId`.
+
+
+4. AUTOCOMPLETE FOR TAGGING
+---------------------------
+
+**Client Side:**
+- File: `client/src/components/Notes.js`
+  - On typing `@`, shows dropdown of users (from `/api/users`).
+  - Keyboard and mouse navigation for selection.
+  - Inserts `@username` into message, highlights in blue.
+
+**Server Side:**
+- File: `server/controllers/userController.js`
+  - `getUsers`: Returns all users except current user (name, email).
+- File: `server/routes/users.js`
+  - GET `/api/users` uses `getUsers` controller.
+
+
+5. VARIABLES & DATA FLOW SUMMARY
+--------------------------------
+
+- **Frontend State:**
+  - `formData` (Login/Register), `token`, `userId` (localStorage)
+  - `candidates`, `notifications`, `notes`, `message`, `users`, `showAutocomplete`, etc.
+- **Backend State:**
+  - `activeSessions` (map of userId to session info)
+  - `userConnections` (map of userId to socket IDs)
+  - MongoDB collections: Users, Candidates, Notes, Notifications
+
+- **Key Functions:**
+  - `onSubmit` (Login/Register/Notes)
+  - `handleMessageChange`, `selectAutocompleteUser`, `handleKeyDown` (Notes)
+  - `createNote`, `getUsers`, `getNotifications`, `markAsRead` (server controllers)
+
+- **Key Files:**
+  - `client/src/pages/Login.js`, `client/src/pages/Register.js`, `client/src/pages/Dashboard.js`, `client/src/components/Notes.js`, `client/src/context/SocketContext.js`, `client/src/api/index.js`
+  - `server/controllers/authController.js`, `server/controllers/noteController.js`, `server/controllers/userController.js`, `server/controllers/notificationController.js`, `server/server.js`, `server/routes/*.js`, `server/middleware/auth.js`
+
+
+This document provides a step-by-step, file-by-file, and function-by-function overview of how login, real-time notes, tagging, and notifications flow through the system. 
